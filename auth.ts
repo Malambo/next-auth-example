@@ -4,6 +4,7 @@ import type { NextAuthConfig } from "next-auth"
 
 import GitHub from "next-auth/providers/github"
 import Google from "next-auth/providers/google"
+import Auth0 from "next-auth/providers/auth0"
 
 import { createStorage } from "unstorage"
 import memoryDriver from "unstorage/drivers/memory"
@@ -20,18 +21,15 @@ const storage = createStorage({
     : memoryDriver(),
 })
 
-const config = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  debug: !!process.env.AUTH_DEBUG,
   theme: { logo: "https://authjs.dev/img/logo-sm.png" },
   adapter: UnstorageAdapter(storage),
   providers: [
-    GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET
-    }),
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET
-    }),
+    // Atlassian,
+    Auth0,
+    GitHub,
+    Google
   ],
   basePath: "/auth",
   session: { strategy: "jwt" },
@@ -49,19 +47,13 @@ const config = {
       return token
     },
     async session({ session, token }) {
-      if (token?.accessToken) {
-        session.accessToken = token.accessToken
-      }
+      if (token?.accessToken) session.accessToken = token.accessToken
+
       return session
     },
   },
-  experimental: {
-    enableWebAuthn: true,
-  },
-  debug: process.env.NODE_ENV !== "production" ? true : false,
-} satisfies NextAuthConfig
-
-export const { handlers, auth, signIn, signOut } = NextAuth(config)
+  experimental: { enableWebAuthn: true },
+})
 
 declare module "next-auth" {
   interface Session {
